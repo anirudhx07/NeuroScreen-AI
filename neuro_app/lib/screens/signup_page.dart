@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'home_page.dart';
 
 /// Signup page widget for new user registration
 class SignupPage extends StatefulWidget {
@@ -29,6 +31,9 @@ class _SignupPageState extends State<SignupPage> {
   // Form validation key
   final _formKey = GlobalKey<FormState>();
 
+  // Firebase Auth instance
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   @override
   void dispose() {
     // Clean up all controllers
@@ -39,26 +44,77 @@ class _SignupPageState extends State<SignupPage> {
     super.dispose();
   }
 
-  /// Handle signup form submission
-  void _signup() {
+  /// Handle signup form submission with Firebase
+  Future<void> _signup() async {
     if (_formKey.currentState!.validate() && _agreeToTerms) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 2), () {
+      try {
+        // Create user account with email and password
+        final UserCredential userCredential =
+            await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        // Update user profile with display name
+        await userCredential.user?.updateDisplayName(_nameController.text);
+
         if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Account Created Successfully!')),
+
+          // Navigate to home page with user data
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(user: userCredential.user!),
+            ),
           );
-          // Return to login page
-          Navigator.pop(context);
         }
-      });
+      } on FirebaseAuthException catch (e) {
+        setState(() => _isLoading = false);
+
+        // Handle Firebase authentication errors
+        String errorMessage;
+        if (e.code == 'weak-password') {
+          errorMessage = 'Password is too weak';
+        } else if (e.code == 'email-already-in-use') {
+          errorMessage = 'Email is already registered';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email format';
+        } else if (e.code == 'operation-not-allowed') {
+          errorMessage = 'Email/password sign-up is not enabled';
+        } else {
+          errorMessage = 'Signup failed: ${e.message}';
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } else if (!_agreeToTerms) {
       // Show error if terms not agreed
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please agree to Terms & Conditions')),
+        const SnackBar(
+          content: Text('Please agree to Terms & Conditions'),
+          backgroundColor: Colors.orange,
+        ),
       );
     }
   }

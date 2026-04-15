@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "554316239785",
+    "project_id": "neuroscreen-5002d",
+    "storage_bucket": "neuroscreen-5002d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554316239785:android:d185d7c08a9a8e93682ab8",
+        "android_client_info": {
+          "package_name": "com.example.neuro_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiWyAKfmOwS5NId8Hx8N2HLcqg-K85fd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
+import 'home_page.dart';
 
 /// Login page widget for user authentication
 class LoginPage extends StatefulWidget {
@@ -24,6 +26,9 @@ class _LoginPageState extends State<LoginPage> {
   // Form key for validation
   final _formKey = GlobalKey<FormState>();
 
+  // Firebase Auth instance
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   @override
   void dispose() {
     // Clean up controllers when widget is disposed
@@ -32,24 +37,68 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  /// Handle login form submission
-  void _login() {
+  /// Handle login form submission with Firebase
+  Future<void> _login() async {
     // Validate form before proceeding
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate API call with 2 second delay
-      Future.delayed(const Duration(seconds: 2), () {
+      try {
+        // Attempt to sign in with email and password
+        final UserCredential userCredential =
+            await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
         if (mounted) {
           setState(() => _isLoading = false);
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Login Successful!')),
+
+          // Navigate to home page with user data
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(user: userCredential.user!),
+            ),
           );
-          // Navigate to home screen
-          // Navigator.pushReplacementNamed(context, '/home');
         }
-      });
+      } on FirebaseAuthException catch (e) {
+        setState(() => _isLoading = false);
+
+        // Handle Firebase authentication errors
+        String errorMessage;
+        if (e.code == 'user-not-found') {
+          errorMessage = 'No account found with this email';
+        } else if (e.code == 'wrong-password') {
+          errorMessage = 'Incorrect password';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email format';
+        } else if (e.code == 'user-disabled') {
+          errorMessage = 'This account has been disabled';
+        } else [
+          errorMessage = 'Login failed: ${e.message}'
+        ];
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -235,15 +284,33 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     _SocialButton(
                       icon: Icons.g_mobiledata,
-                      onPressed: () {},
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Google login coming soon'),
+                          ),
+                        );
+                      },
                     ),
                     _SocialButton(
                       icon: Icons.facebook,
-                      onPressed: () {},
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Facebook login coming soon'),
+                          ),
+                        );
+                      },
                     ),
                     _SocialButton(
                       icon: Icons.apple,
-                      onPressed: () {},
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Apple login coming soon'),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
