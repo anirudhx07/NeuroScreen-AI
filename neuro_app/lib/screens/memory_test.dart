@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:neuro_app/helpers/test_result_helper.dart';
+import 'package:neuro_app/screens/neurology_report_screen.dart';
 
 class MemoryTest extends StatefulWidget {
   const MemoryTest({super.key});
@@ -94,6 +97,36 @@ class _MemoryTestState extends State<MemoryTest> {
       _correctAnswers = correct;
       _testCompleted = true;
     });
+
+    // Store test result in Firestore
+    _storeTestResult(correct);
+  }
+
+  Future<void> _storeTestResult(int correctAnswers) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        await TestResultHelper.storeMemoryTestResult(
+          userId: currentUser.uid,
+          correctAnswers: correctAnswers,
+          totalItems: 5, // User selects 5 items
+        );
+      }
+    } catch (e) {
+      print('Error storing test result: $e');
+    }
+  }
+
+  void _viewReport() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NeurologyReportScreen(userId: currentUser.uid),
+        ),
+      );
+    }
   }
 
   void _restartTest() {
@@ -364,11 +397,25 @@ class _MemoryTestState extends State<MemoryTest> {
                                 side: BorderSide(color: Colors.blue[700]!),
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: _viewReport,
+                              icon: const Icon(Icons.assessment),
+                              label: const Text('View Report'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
                             ElevatedButton.icon(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.check),
-                              label: const Text('Complete'),
+                              label: const Text('Done'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
