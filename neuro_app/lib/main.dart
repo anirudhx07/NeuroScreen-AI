@@ -1,14 +1,19 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
-import 'screens/login_page.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   // Initialize Firebase before running the app
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Handle Firebase initialization errors (e.g., on web with no connection)
+    print('Firebase initialization failed: $e');
+  }
   runApp(const MyApp());
 }
 
@@ -20,13 +25,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NeuroScreen',
-      // Configure app theme with deep purple seed color
+      // Configure app theme with deep blue seed color
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // Start app with login page
-      home: const LoginPage(),
+      // Start app with splash screen
+      home: const SplashScreen(),
     );
   }
 }

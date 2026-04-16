@@ -75,9 +75,9 @@ class _LoginPageState extends State<LoginPage> {
           errorMessage = 'Invalid email format';
         } else if (e.code == 'user-disabled') {
           errorMessage = 'This account has been disabled';
-        } else [
-          errorMessage = 'Login failed: ${e.message}'
-        ];
+        } else {
+          errorMessage = 'Login failed: ${e.message}';
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
