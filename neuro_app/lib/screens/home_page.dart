@@ -1,6 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'login_page.dart';
+import 'reaction_time_test.dart';
+import 'voice_analysis_test.dart';
+import 'memory_test.dart';
+import 'motor_skills_test.dart';
+import 'profile_page.dart';
+import 'eye_tracking_test.dart';
 
 /// Home page - Screening Tests interface
 class HomePage extends StatefulWidget {
@@ -14,6 +20,49 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedNavIndex = 0;
+
+  // Track completed tests
+  final Set<String> _completedTests = {};
+
+  // Available tests
+  final List<Map<String, dynamic>> _allTests = [
+    {
+      'id': 'voice',
+      'title': 'Voice Analysis',
+      'description': 'Speech pattern & tone consistency',
+      'icon': Icons.mic,
+    },
+    {
+      'id': 'reaction',
+      'title': 'Reaction Time',
+      'description': 'Visual stimulus response tracking',
+      'icon': Icons.schedule,
+    },
+    {
+      'id': 'memory',
+      'title': 'Memory Test',
+      'description': 'Spatial and verbal recall tasks',
+      'icon': Icons.psychology,
+    },
+    {
+      'id': 'motor',
+      'title': 'Motor Skills',
+      'description': 'Finger tapping & stability assessment',
+      'icon': Icons.touch_app,
+    },
+    {
+      'id': 'eye',
+      'title': 'Eye-Tracking',
+      'description': 'Visual pursuit and saccade tracking',
+      'icon': Icons.remove_red_eye,
+    },
+  ];
+
+  void _markTestCompleted(String testId) {
+    setState(() {
+      _completedTests.add(testId);
+    });
+  }
 
   Future<void> _logout(BuildContext context) async {
     try {
@@ -90,34 +139,41 @@ class _HomePageState extends State<HomePage> {
                 _buildProgressOverview(),
                 const SizedBox(height: 32),
 
-                // Active Test: Motor Skills (Highlighted)
-                _buildActiveTestCard(),
-                const SizedBox(height: 32),
-
                 // Completed Section
-                _buildSectionHeader('Completed'),
-                const SizedBox(height: 12),
-                _buildCompletedTestCard(
-                  icon: Icons.mic,
-                  title: 'Voice Analysis',
-                  description: 'Speech pattern & tone consistency',
-                ),
-                const SizedBox(height: 32),
+                if (_completedTests.isNotEmpty) ...[
+                  _buildSectionHeader('Completed'),
+                  const SizedBox(height: 12),
+                  ..._allTests
+                      .where((test) => _completedTests.contains(test['id']))
+                      .map((test) => Column(
+                            children: [
+                              _buildCompletedTestCard(
+                                icon: test['icon'],
+                                title: test['title'],
+                                description: test['description'],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          )),
+                  const SizedBox(height: 20),
+                ],
 
                 // Not Started Section
                 _buildSectionHeader('Not Started'),
                 const SizedBox(height: 12),
-                _buildNotStartedTestCard(
-                  icon: Icons.psychology,
-                  title: 'Memory Test',
-                  description: 'Spatial and verbal recall tasks',
-                ),
-                const SizedBox(height: 12),
-                _buildNotStartedTestCard(
-                  icon: Icons.schedule,
-                  title: 'Reaction Time',
-                  description: 'Visual stimulus response tracking',
-                ),
+                ..._allTests
+                    .where((test) => !_completedTests.contains(test['id']))
+                    .map((test) => Column(
+                          children: [
+                            _buildNotStartedTestCard(
+                              icon: test['icon'],
+                              title: test['title'],
+                              description: test['description'],
+                              onTap: () => _navigateToTest(test['id']),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        )),
                 const SizedBox(height: 32),
 
                 // Screening Insight Panel
@@ -137,7 +193,46 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _navigateToTest(String testId) {
+    Widget testScreen;
+
+    switch (testId) {
+      case 'voice':
+        testScreen = const VoiceAnalysisTest();
+        break;
+      case 'reaction':
+        testScreen = const ReactionTimeTest();
+        break;
+      case 'memory':
+        testScreen = const MemoryTest();
+        break;
+      case 'motor':
+        testScreen = const MotorSkillsTest();
+        break;
+      case 'eye':
+        testScreen = const EyeTrackingTest();
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Test not found')),
+        );
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => testScreen),
+    ).then((_) {
+      // Mark as completed when returning
+      _markTestCompleted(testId);
+    });
+  }
+
   Widget _buildProgressOverview() {
+    int totalTests = _allTests.length;
+    int completedCount = _completedTests.length;
+    double progressPercent = (completedCount / totalTests) * 100;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -162,7 +257,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'STEP 2 OF 4',
+                    'STEP ${completedCount + 1} OF $totalTests',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -171,9 +266,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '50% Completed',
-                    style: TextStyle(
+                  Text(
+                    '${progressPercent.toStringAsFixed(0)}% Completed',
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -182,7 +277,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               Text(
-                '2 of 4 tests completed',
+                '$completedCount of $totalTests tests completed',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -196,7 +291,7 @@ class _HomePageState extends State<HomePage> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: 0.5,
+              value: completedCount / totalTests,
               minHeight: 12,
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
@@ -216,123 +311,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildActiveTestCard() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue[700]!, Colors.blue[600]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: CircularProgressIndicator(
-                        value: 0.5,
-                        strokeWidth: 4,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                      ),
-                    ),
-                    Icon(
-                      Icons.touch_app,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'IN PROGRESS',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Motor Skills',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Finger tapping & stability assessment',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue[700],
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: const Text(
-                'Continue Test',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
+Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
@@ -435,52 +414,56 @@ class _HomePageState extends State<HomePage> {
     required IconData icon,
     required String title,
     required String description,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[200]!, width: 1),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey[200]!, width: 1),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: Colors.blue[600], size: 24),
             ),
-            child: Icon(icon, color: Colors.blue[600], size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Icon(Icons.chevron_right, color: Colors.grey[400], size: 24),
-        ],
+            const SizedBox(width: 12),
+            Icon(Icons.chevron_right, color: Colors.grey[400], size: 24),
+          ],
+        ),
       ),
     );
   }
@@ -580,6 +563,16 @@ Widget _buildBottomNavigation() {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedNavIndex = index);
+
+        // Navigate to profile if Profile tab is tapped
+        if (label == 'Profile') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProfilePage(user: widget.user),
+            ),
+          );
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
