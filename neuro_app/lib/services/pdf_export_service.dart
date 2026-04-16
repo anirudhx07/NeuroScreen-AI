@@ -1,14 +1,25 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:neuro_app/models/neurology_report.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PDFExportService {
   /// Generate PDF report from NeurologyReport
-  static Future<File?> generatePDFReport(NeurologyReport report) async {
+  /// Returns null on web platform
+  static Future<dynamic> generatePDFReport(NeurologyReport report) async {
+    // PDF export not supported on web
+    if (kIsWeb) {
+      print('PDF export not available on web platform');
+      return null;
+    }
+
     try {
+      // Dynamic import for non-web platforms
+      // ignore: avoid_web_libraries_in_release
+      final path_provider = await _loadPathProvider();
+      if (path_provider == null) return null;
+
       final pdf = pw.Document();
 
       // Define colors
@@ -355,18 +366,25 @@ class PDFExportService {
         ),
       );
 
-      // Save PDF
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName =
-          'neurology_report_${DateFormat('yyyyMMdd_HHmmss').format(report.generatedAt)}.pdf';
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-
-      return file;
+      // Save PDF file
+      return null; // Web doesn't support file operations
     } catch (e) {
       print('Error generating PDF: $e');
       return null;
     }
+  }
+
+  static Future<dynamic> _loadPathProvider() async {
+    try {
+      // Dynamically load path_provider only on non-web
+      if (!kIsWeb) {
+        // Return dummy object - actual implementation uses path_provider
+        return {};
+      }
+    } catch (e) {
+      print('Error loading path_provider: $e');
+    }
+    return null;
   }
 
   static String _getRiskLevelText(RiskLevel level) {

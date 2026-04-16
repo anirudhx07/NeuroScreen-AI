@@ -5,7 +5,6 @@ import 'package:neuro_app/services/firestore_test_service.dart';
 import 'package:neuro_app/services/neurological_analysis_service.dart';
 import 'package:neuro_app/services/pdf_export_service.dart';
 import 'package:neuro_app/widgets/report_card_widget.dart';
-import 'dart:io';
 
 class NeurologyReportScreen extends StatefulWidget {
   final String userId;

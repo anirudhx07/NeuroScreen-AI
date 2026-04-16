@@ -41,6 +41,9 @@ dependencies:
   cloud_firestore: ^4.14.0
   url_launcher: ^6.1.0
 
+  # Web support for Firebase
+  js: ^0.7.1
+
   # PDF generation and file handling
   pdf: ^3.10.0
   path_provider: ^2.1.0
