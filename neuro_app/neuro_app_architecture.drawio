@@ -1,163 +1,124 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="app.diagrams.net" modified="2026-04-16T00:00:00.000Z" agent="Claude Code" version="20.0.0" etag="abc123" type="device">
-  <diagram name="Page-1" id="page1">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
-      <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
-
-        <!-- Title -->
-        <mxCell id="title" value="neuro_app - Flutter Project Architecture" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="400" y="20" width="400" height="30" as="geometry"/>
-        </mxCell>
-
-        <!-- Project Root -->
-        <mxCell id="root" value="neuro_app (Flutter)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="450" y="80" width="300" height="50" as="geometry"/>
-        </mxCell>
-
-        <!-- Platform Targets -->
-        <mxCell id="platforms_label" value="Platform Targets" style="text;html=1;fontSize=11;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry x="50" y="170" width="120" height="20" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="android" value="Android" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="50" y="200" width="80" height="40" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="ios" value="iOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="150" y="200" width="80" height="40" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="macos" value="macOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="250" y="200" width="80" height="40" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="linux" value="Linux" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="350" y="200" width="80" height="40" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="windows" value="Windows" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="450" y="200" width="80" height="40" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="web" value="Web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="550" y="200" width="80" height="40" as="geometry"/>
-        </mxCell>
-
-        <!-- Connectors to platforms -->
-        <mxCell id="edge1" edge="1" parent="1" source="root" target="android">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="edge2" edge="1" parent="1" source="root" target="ios">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="edge3" edge="1" parent="1" source="root" target="macos">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="edge4" edge="1" parent="1" source="root" target="linux">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="edge5" edge="1" parent="1" source="root" target="windows">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="edge6" edge="1" parent="1" source="root" target="web">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-
-        <!-- Dart/Flutter Structure -->
-        <mxCell id="dart_layer" value="lib/ (Dart Code)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e6f1;strokeColor=#3498db;strokeWidth=2;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="400" y="300" width="400" height="50" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="edge_to_dart" edge="1" parent="1" source="root" target="dart_layer">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="600" y="130" as="sourcePoint"/>
-            <mxPoint x="600" y="300" as="targetPoint"/>
-          </mxGeometry>
-        </mxCell>
-
-        <!-- Main App Components -->
-        <mxCell id="main" value="main.dart" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#66bb6a;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="250" y="400" width="100" height="60" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="myapp" value="MyApp (Root Widget)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="400" y="400" width="120" height="60" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="homepage" value="MyHomePage (Stateful)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#ffa726;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="570" y="400" width="120" height="60" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="edge_main" edge="1" parent="1" source="dart_layer" target="main">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="450" y="350" as="sourcePoint"/>
-            <mxPoint x="300" y="400" as="targetPoint"/>
-          </mxGeometry>
-        </mxCell>
-
-        <mxCell id="edge_app" edge="1" parent="1" source="dart_layer" target="myapp">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="550" y="350" as="sourcePoint"/>
-            <mxPoint x="460" y="400" as="targetPoint"/>
-          </mxGeometry>
-        </mxCell>
-
-        <mxCell id="edge_home" edge="1" parent="1" source="dart_layer" target="homepage">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="700" y="350" as="sourcePoint"/>
-            <mxPoint x="630" y="400" as="targetPoint"/>
-          </mxGeometry>
-        </mxCell>
-
-        <!-- DetailedWidgets -->
-        <mxCell id="widgets_label" value="Current Widgets" style="text;html=1;fontSize=10;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="250" y="490" width="100" height="20" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="scaffold" value="Scaffold" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="150" y="530" width="80" height="30" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="appbar" value="AppBar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="250" y="530" width="80" height="30" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="column" value="Column" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="350" y="530" width="80" height="30" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="fab" value="FloatingActionButton" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="450" y="530" width="110" height="30" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="counter_state" value="Counter State" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="590" y="530" width="100" height="30" as="geometry"/>
-        </mxCell>
-
-        <!-- Dependencies -->
-        <mxCell id="deps_label" value="Dependencies" style="text;html=1;fontSize=11;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry x="50" y="600" width="150" height="20" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="flutter_dep" value="flutter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#ab47bc;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="50" y="640" width="100" height="35" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="cupertino_dep" value="cupertino_icons" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#ab47bc;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="170" y="640" width="120" height="35" as="geometry"/>
-        </mxCell>
-
-        <!-- Project Status -->
-        <mxCell id="status_label" value="Project Status" style="text;html=1;fontSize=11;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry x="350" y="600" width="150" height="20" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="status" value="✓ Template Setup&#10;✗ Custom Implementation&#10;→ Ready for Development" style="text;html=1;fontSize=9;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="350" y="630" width="200" height="60" as="geometry"/>
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
+<mxfile host="65bd71144e">
+    <diagram name="Page-1" id="page1">
+        <mxGraphModel dx="713" dy="633" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="neuro_app - Flutter Project Architecture" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="20" width="400" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="root" value="neuro_app (Flutter)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="80" width="300" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="platforms_label" value="Platform Targets" style="text;html=1;fontSize=11;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="170" width="120" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="android" value="Android" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="ios" value="iOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="macos" value="macOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="linux" value="Linux" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="windows" value="Windows" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="web" value="Web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge1" parent="1" source="root" target="android" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge2" parent="1" source="root" target="ios" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge3" parent="1" source="root" target="macos" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge4" parent="1" source="root" target="linux" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge5" parent="1" source="root" target="windows" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge6" parent="1" source="root" target="web" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="dart_layer" value="lib/ (Dart Code)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e6f1;strokeColor=#3498db;strokeWidth=2;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="300" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_to_dart" parent="1" source="root" target="dart_layer" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="600" y="130" as="sourcePoint"/>
+                        <mxPoint x="600" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="main" value="main.dart" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#66bb6a;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="400" width="100" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="myapp" value="MyApp (Root Widget)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#ffa726;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="homepage" value="MyHomePage (Stateful)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#ffa726;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_main" parent="1" source="dart_layer" target="main" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="450" y="350" as="sourcePoint"/>
+                        <mxPoint x="300" y="400" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_app" parent="1" source="dart_layer" target="myapp" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="550" y="350" as="sourcePoint"/>
+                        <mxPoint x="460" y="400" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_home" parent="1" source="dart_layer" target="homepage" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="350" as="sourcePoint"/>
+                        <mxPoint x="630" y="400" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="widgets_label" value="Current Widgets" style="text;html=1;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="490" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="scaffold" value="Scaffold" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="530" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="appbar" value="AppBar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="530" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="column" value="Column" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="530" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="fab" value="FloatingActionButton" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="530" width="110" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="counter_state" value="Counter State" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#ec407a;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="530" width="100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="deps_label" value="Dependencies" style="text;html=1;fontSize=11;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="600" width="150" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="flutter_dep" value="flutter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#ab47bc;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="640" width="100" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="cupertino_dep" value="cupertino_icons" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#ab47bc;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="640" width="120" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="status_label" value="Project Status" style="text;html=1;fontSize=11;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="600" width="150" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="status" value="✓ Template Setup&#xa;✗ Custom Implementation&#xa;→ Ready for Development" style="text;html=1;fontSize=9;align=left;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="630" width="200" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
 </mxfile>
