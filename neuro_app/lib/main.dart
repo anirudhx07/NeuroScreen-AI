@@ -2,10 +2,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
+import 'services/app_config.dart';
 
 void main() async {
   // Initialize Flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize app configuration
+  // Set environment to development by default
+  // For production builds, change to AppConfig.ENV_PRODUCTION
+  AppConfig.initialize(environment: AppConfig.ENV_DEVELOPMENT);
 
   // Initialize Firebase with error handling
   try {

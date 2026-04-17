@@ -42,7 +42,26 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
         _errorMessage = null;
       });
 
+      print('========== REPORT GENERATION START ==========');
       print('DEBUG: Starting report generation for user: ${widget.userId}');
+      print('DEBUG: ML API Endpoint: ${_mlApiService.baseUrl}');
+
+      // Check ML backend health first
+      print('DEBUG: Checking ML backend health...');
+      bool mlBackendHealthy = false;
+      try {
+        mlBackendHealthy = await _mlApiService.healthCheck().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            print('DEBUG: Health check timeout');
+            return false;
+          },
+        );
+        print('DEBUG: ML backend health check result: $mlBackendHealthy');
+      } catch (e) {
+        print('ERROR: Health check failed: $e');
+        mlBackendHealthy = false;
+      }
 
       // Add timeout to prevent hanging
       final recentTests = await _firestoreService
@@ -83,71 +102,77 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
 
       print('DEBUG: Found ${allTests.length} total historical tests');
 
-      // Generate report using ML backend (97.78% accuracy)
-      print('DEBUG: Calling ML backend API for risk prediction');
-      try {
-        final mlPrediction = await _mlApiService
-            .predictRisk(recentTests)
-            .timeout(
-              const Duration(seconds: 15),
-              onTimeout: () => throw TimeoutException('ML API timeout'),
-            );
+      // Try to generate report using ML backend if healthy
+      if (mlBackendHealthy) {
+        print('DEBUG: ML backend is healthy - Calling ML backend API for risk prediction');
+        try {
+          final mlPrediction = await _mlApiService
+              .predictRisk(recentTests)
+              .timeout(
+                const Duration(seconds: 15),
+                onTimeout: () => throw TimeoutException('ML API timeout'),
+              );
 
-        print('DEBUG: ML prediction received - Score: ${mlPrediction.overallRiskScore}, Level: ${mlPrediction.riskLevel}');
+          print('DEBUG: ML prediction received - Score: ${mlPrediction.overallRiskScore}, Level: ${mlPrediction.riskLevel}');
 
-        // Create report from ML predictions
-        final report = NeurologyReport(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: widget.userId,
-          generatedAt: DateTime.now(),
-          overallRiskScore: mlPrediction.overallRiskScore,
-          riskLevel: mlPrediction.riskLevel == 'low'
-              ? RiskLevel.low
-              : (mlPrediction.riskLevel == 'medium' ? RiskLevel.medium : RiskLevel.high),
-          testScores: _createTestBreakdowns(recentTests, mlPrediction),
-          trendData: _calculateTrends(recentTests, allTests),
-          interpretation: mlPrediction.confidence > 0.8
-              ? 'ML-powered assessment (${(mlPrediction.confidence * 100).toStringAsFixed(1)}% confidence)'
-              : 'ML assessment',
-          recommendations: mlPrediction.recommendations,
-        );
+          // Create report from ML predictions
+          final report = NeurologyReport(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: widget.userId,
+            generatedAt: DateTime.now(),
+            overallRiskScore: mlPrediction.overallRiskScore,
+            riskLevel: mlPrediction.riskLevel == 'low'
+                ? RiskLevel.low
+                : (mlPrediction.riskLevel == 'medium' ? RiskLevel.medium : RiskLevel.high),
+            testScores: _createTestBreakdowns(recentTests, mlPrediction),
+            trendData: _calculateTrends(recentTests, allTests),
+            interpretation: mlPrediction.confidence > 0.8
+                ? 'ML-powered assessment (${(mlPrediction.confidence * 100).toStringAsFixed(1)}% confidence)'
+                : 'ML assessment',
+            recommendations: mlPrediction.recommendations,
+          );
 
-        _usingMLBackend = true;
-        print('DEBUG: Report created from ML backend');
+          _usingMLBackend = true;
+          print('DEBUG: Report created from ML backend');
 
-        // Store report
-        print('DEBUG: Storing report to Firestore');
-        await _firestoreService.storeNeurologyReport(report).timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            print('DEBUG: storeNeurologyReport timeout');
-            return;
-          },
-        );
+          // Store report
+          print('DEBUG: Storing report to Firestore');
+          await _firestoreService.storeNeurologyReport(report).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              print('DEBUG: storeNeurologyReport timeout');
+              return;
+            },
+          );
 
-        if (mounted) {
-          setState(() {
-            _report = report;
-            _isLoading = false;
-          });
-          print('DEBUG: UI updated with ML-powered report');
+          if (mounted) {
+            setState(() {
+              _report = report;
+              _isLoading = false;
+            });
+            print('DEBUG: UI updated with ML-powered report');
+            print('========== REPORT GENERATION COMPLETE (ML) ==========');
+          }
+        } on TimeoutException catch (e) {
+          print('ERROR: ML API timeout ($e), falling back to local analysis');
+          await _generateLocalReport(recentTests, allTests);
+        } catch (e) {
+          print('ERROR: ML API failed ($e), falling back to local analysis');
+          await _generateLocalReport(recentTests, allTests);
         }
-      } on TimeoutException catch (e) {
-        print('ERROR: ML API timeout, falling back to local analysis');
-        _generateLocalReport(recentTests, allTests);
-      } catch (e) {
-        print('ERROR: ML API failed ($e), falling back to local analysis');
-        _generateLocalReport(recentTests, allTests);
+      } else {
+        print('DEBUG: ML backend not healthy - Using local analysis');
+        await _generateLocalReport(recentTests, allTests);
       }
     } catch (e) {
-      print('ERROR: $e');
-      print('Stack: $e');
+      print('ERROR: Report generation failed: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error: $e';
+          _errorMessage = 'Error generating report: $e';
           _isLoading = false;
         });
       }
+      print('========== REPORT GENERATION FAILED ==========');
     }
   }
 
@@ -178,14 +203,18 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
           _isLoading = false;
           _usingMLBackend = false;
         });
+        print('DEBUG: UI updated with local analysis report');
+        print('========== REPORT GENERATION COMPLETE (LOCAL) ==========');
       }
     } catch (e) {
+      print('ERROR: Local report generation failed: $e');
       if (mounted) {
         setState(() {
           _errorMessage = 'Error generating report: $e';
           _isLoading = false;
         });
       }
+      print('========== REPORT GENERATION FAILED ==========');
     }
   }
 

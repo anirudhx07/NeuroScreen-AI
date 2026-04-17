@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:neuro_app/models/neurology_report.dart';
 import 'package:neuro_app/models/test_result.dart';
+import 'package:neuro_app/services/app_config.dart';
 
 /// Exception thrown by ML API service
 class MLApiException implements Exception {
@@ -97,18 +98,40 @@ class TrendAnalysisResponse {
 
 /// ML API Service - Handles communication with Python ML backend
 class MLApiService {
-  static const String _baseUrl = 'http://localhost:8000';
+  // Default endpoints for different environments
+  static const String _localBaseUrl = 'http://localhost:8000';
+  static const String _emulatorBaseUrl = 'http://10.0.2.2:8000'; // Android emulator
+  static const String _prodBaseUrl = 'https://ml-api.neuroscreen.com'; // Production (set via env)
+
   static const Duration _timeout = Duration(seconds: 10);
   static const int _maxRetries = 3;
 
   final http.Client _httpClient;
+  String? _customBaseUrl; // Allow custom configuration
 
-  MLApiService({http.Client? httpClient})
-      : _httpClient = httpClient ?? http.Client();
+  MLApiService({
+    http.Client? httpClient,
+    String? baseUrl,
+  }) : _httpClient = httpClient ?? http.Client() {
+    _customBaseUrl = baseUrl;
+  }
 
   /// Get the base URL for the API
-  /// Override for testing or different environments
-  String get baseUrl => _baseUrl;
+  /// Uses custom URL if set, otherwise uses configured environment URL
+  String get baseUrl {
+    if (_customBaseUrl != null) return _customBaseUrl!;
+    return AppConfig().mlApiBaseUrl;
+  }
+
+  /// Set custom base URL (useful for testing or different environments)
+  void setCustomBaseUrl(String url) {
+    _customBaseUrl = url;
+  }
+
+  /// Reset to default base URL
+  void resetBaseUrl() {
+    _customBaseUrl = null;
+  }
 
   /// Predict neurological risk based on test results
   ///
