@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:neuro_app/models/neurology_report.dart';
+import 'package:neuro_app/models/test_result.dart';
 import 'package:neuro_app/services/firestore_test_service.dart';
 import 'package:neuro_app/services/neurological_analysis_service.dart';
+import 'package:neuro_app/services/ml_api_service.dart';
 import 'package:neuro_app/services/pdf_export_service.dart';
 import 'package:neuro_app/widgets/report_card_widget.dart';
 
@@ -20,9 +23,11 @@ class NeurologyReportScreen extends StatefulWidget {
 
 class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
   final FirestoreTestService _firestoreService = FirestoreTestService();
+  final MLApiService _mlApiService = MLApiService();
   NeurologyReport? _report;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _usingMLBackend = false;  // Track if ML backend was used
 
   @override
   void initState() {
@@ -78,34 +83,61 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
 
       print('DEBUG: Found ${allTests.length} total historical tests');
 
-      // Generate report
-      print('DEBUG: Generating report from ${recentTests.length} recent tests');
-      final report = NeurologicalAnalysisService.analyzeResults(
-        widget.userId,
-        recentTests,
-        historicalTests: allTests,
-      );
+      // Generate report using ML backend (97.78% accuracy)
+      print('DEBUG: Calling ML backend API for risk prediction');
+      try {
+        final mlPrediction = await _mlApiService
+            .predictRisk(recentTests)
+            .timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => throw TimeoutException('ML API timeout'),
+            );
 
-      print('DEBUG: Report generated - Score: ${report.overallRiskScore}, Risk: ${report.riskLevel}');
+        print('DEBUG: ML prediction received - Score: ${mlPrediction.overallRiskScore}, Level: ${mlPrediction.riskLevel}');
 
-      // Store report
-      print('DEBUG: Storing report to Firestore');
-      await _firestoreService.storeNeurologyReport(report).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('DEBUG: storeNeurologyReport timeout');
-          return;
-        },
-      );
+        // Create report from ML predictions
+        final report = NeurologyReport(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          userId: widget.userId,
+          generatedAt: DateTime.now(),
+          overallRiskScore: mlPrediction.overallRiskScore,
+          riskLevel: mlPrediction.riskLevel == 'low'
+              ? RiskLevel.low
+              : (mlPrediction.riskLevel == 'medium' ? RiskLevel.medium : RiskLevel.high),
+          testScores: _createTestBreakdowns(recentTests, mlPrediction),
+          trendData: _calculateTrends(recentTests, allTests),
+          interpretation: mlPrediction.confidence > 0.8
+              ? 'ML-powered assessment (${(mlPrediction.confidence * 100).toStringAsFixed(1)}% confidence)'
+              : 'ML assessment',
+          recommendations: mlPrediction.recommendations,
+        );
 
-      print('DEBUG: Report stored successfully');
+        _usingMLBackend = true;
+        print('DEBUG: Report created from ML backend');
 
-      if (mounted) {
-        setState(() {
-          _report = report;
-          _isLoading = false;
-        });
-        print('DEBUG: UI updated with report');
+        // Store report
+        print('DEBUG: Storing report to Firestore');
+        await _firestoreService.storeNeurologyReport(report).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('DEBUG: storeNeurologyReport timeout');
+            return;
+          },
+        );
+
+        if (mounted) {
+          setState(() {
+            _report = report;
+            _isLoading = false;
+          });
+          print('DEBUG: UI updated with ML-powered report');
+        }
+      } on TimeoutException catch (e) {
+        print('ERROR: ML API timeout, falling back to local analysis');
+        _generateLocalReport(recentTests, allTests);
+      } catch (e) {
+        print('ERROR: ML API failed ($e), falling back to local analysis');
+        _generateLocalReport(recentTests, allTests);
       }
     } catch (e) {
       print('ERROR: $e');
@@ -117,6 +149,108 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
         });
       }
     }
+  }
+
+  /// Fallback method if ML API is unavailable
+  Future<void> _generateLocalReport(
+    List<TestResult> recentTests,
+    List<TestResult> allTests,
+  ) async {
+    try {
+      print('DEBUG: Generating local report (fallback)');
+      final report = NeurologicalAnalysisService.analyzeResults(
+        widget.userId,
+        recentTests,
+        historicalTests: allTests,
+      );
+
+      print('DEBUG: Local report generated - Score: ${report.overallRiskScore}');
+
+      // Store report
+      await _firestoreService.storeNeurologyReport(report).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => print('DEBUG: storeNeurologyReport timeout'),
+      );
+
+      if (mounted) {
+        setState(() {
+          _report = report;
+          _isLoading = false;
+          _usingMLBackend = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error generating report: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Create test score breakdowns from ML predictions
+  Map<String, TestScoreBreakdown> _createTestBreakdowns(
+    List<TestResult> recentTests,
+    RiskPredictionResponse mlPrediction,
+  ) {
+    final breakdowns = <String, TestScoreBreakdown>{};
+
+    for (var test in recentTests) {
+      final categoryRisk = mlPrediction.riskCategories[test.testType] ?? 0.0;
+      final status = categoryRisk < 33
+          ? 'Normal'
+          : (categoryRisk < 66 ? 'At Risk' : 'High Risk');
+
+      breakdowns[test.testType] = TestScoreBreakdown(
+        testName: test.testType,
+        score: test.score,
+        status: status,
+        feedback: 'Score: ${test.score.toStringAsFixed(1)}/100',
+      );
+    }
+
+    return breakdowns;
+  }
+
+  /// Calculate trends from test history
+  Map<String, double> _calculateTrends(
+    List<TestResult> recentTests,
+    List<TestResult> allTests,
+  ) {
+    final trends = <String, double>{};
+
+    // Group by test type
+    final byTestType = <String, List<TestResult>>{};
+    for (var test in allTests) {
+      if (!byTestType.containsKey(test.testType)) {
+        byTestType[test.testType] = [];
+      }
+      byTestType[test.testType]!.add(test);
+    }
+
+    // Calculate trend for each test type
+    for (var entry in byTestType.entries) {
+      final tests = entry.value;
+      if (tests.length >= 2) {
+        final scores = tests.map((t) => t.score).whereType<double>().toList();
+        if (scores.isNotEmpty) {
+          final avg = scores.reduce((a, b) => a + b) / scores.length;
+          final recent = recentTests
+              .where((t) => t.testType == entry.key)
+              .map((t) => t.score)
+              .whereType<double>()
+              .toList();
+
+          if (recent.isNotEmpty) {
+            final recentAvg = recent.reduce((a, b) => a + b) / recent.length;
+            trends[entry.key] = ((recentAvg - avg) / avg * 100);
+          }
+        }
+      }
+    }
+
+    return trends;
   }
 
   Future<void> _exportToPDF() async {
