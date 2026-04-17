@@ -4,16 +4,21 @@ import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
-  // Initialize Firebase before running the app
+  // Initialize Flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase with error handling
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    print('Firebase initialized successfully');
+  } on FirebaseException catch (e) {
+    print('Firebase initialization failed: ${e.code} - ${e.message}');
   } catch (e) {
-    // Handle Firebase initialization errors (e.g., on web with no connection)
-    print('Firebase initialization failed: $e');
+    print('Firebase initialization error: $e');
   }
+
   runApp(const MyApp());
 }
 

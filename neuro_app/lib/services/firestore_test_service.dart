@@ -41,15 +41,22 @@ class FirestoreTestService {
   Future<List<TestResult>> getRecentTestResults(String userId, {int days = 30}) async {
     try {
       final cutoffDate = DateTime.now().subtract(Duration(days: days));
+
+      // Fetch all test results for the user
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
           .collection('test_results')
-          .where('timestamp', isGreaterThanOrEqualTo: cutoffDate)
           .orderBy('timestamp', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => TestResult.fromFirestore(doc)).toList();
+      // Filter client-side for tests within the last N days
+      final recentTests = snapshot.docs
+          .map((doc) => TestResult.fromFirestore(doc))
+          .where((test) => test.timestamp.isAfter(cutoffDate))
+          .toList();
+
+      return recentTests;
     } catch (e) {
       print('Error retrieving recent test results: $e');
       return [];

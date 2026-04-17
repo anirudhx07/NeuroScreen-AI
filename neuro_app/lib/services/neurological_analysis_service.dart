@@ -47,6 +47,14 @@ class NeurologicalAnalysisService {
       latestScores[test.testType] = test.score;
     }
 
+    // Add all test types (completed or not)
+    final allTestTypes = ['memory', 'reaction_time', 'motor_skills', 'voice_analysis', 'eye_tracking'];
+    for (var testType in allTestTypes) {
+      if (!latestScores.containsKey(testType)) {
+        latestScores[testType] = 0; // Mark as incomplete
+      }
+    }
+
     // Calculate individual test breakdowns
     Map<String, TestScoreBreakdown> testBreakdowns = {};
     double totalWeightedScore = 0.0;
@@ -54,8 +62,12 @@ class NeurologicalAnalysisService {
 
     latestScores.forEach((testType, score) {
       final weight = testWeights[testType] ?? 0.2;
-      totalWeightedScore += score * weight;
-      totalWeight += weight;
+
+      // Only count completed tests in overall score
+      if (score > 0) {
+        totalWeightedScore += score * weight;
+        totalWeight += weight;
+      }
 
       final breakdown = _createTestBreakdown(testType, score);
       testBreakdowns[testType] = breakdown;
@@ -89,6 +101,16 @@ class NeurologicalAnalysisService {
 
   /// Creates a breakdown for individual test
   static TestScoreBreakdown _createTestBreakdown(String testType, double score) {
+    // Handle incomplete tests
+    if (score == 0) {
+      return TestScoreBreakdown(
+        testName: _getTestDisplayName(testType),
+        score: 0,
+        status: 'Not Completed',
+        feedback: 'Complete this test to get a score',
+      );
+    }
+
     final thresholds = testThresholds[testType] ?? testThresholds['memory']!;
     String status;
     String feedback;

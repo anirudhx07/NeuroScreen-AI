@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum RiskLevel { low, medium, high }
 
 class NeurologyReport {
@@ -52,7 +54,7 @@ class NeurologyReport {
   Map<String, dynamic> toFirestore() {
     return {
       'userId': userId,
-      'generatedAt': generatedAt,
+      'generatedAt': Timestamp.fromDate(generatedAt),
       'overallRiskScore': overallRiskScore,
       'riskLevel': riskLevel.toString(),
       'testScores': testScores.map((key, value) => MapEntry(key, value.toMap())),

@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'login_page.dart';
+import 'view_reports_screen.dart';
+import 'download_reports_screen.dart';
+import 'screening_history_screen.dart';
 
 class ProfilePage extends StatefulWidget {
   final User? user;
@@ -337,17 +340,38 @@ class _ProfilePageState extends State<ProfilePage> {
                       _buildMenuTile(
                         icon: Icons.description,
                         title: 'View Reports',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ViewReportsScreen(),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuTile(
                         icon: Icons.download,
                         title: 'Download Reports',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DownloadReportsScreen(),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuTile(
                         icon: Icons.history,
                         title: 'Screening History',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ScreeningHistoryScreen(),
+                            ),
+                          );
+                        },
                         isLast: true,
                       ),
                     ],

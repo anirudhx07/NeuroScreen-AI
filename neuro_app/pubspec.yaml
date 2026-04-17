@@ -52,6 +52,16 @@ dependencies:
   # Date formatting
   intl: ^0.19.0
 
+  # Collections utilities
+  collection: ^1.17.0
+
+  # ML Kit for face and vision detection
+  google_mlkit_face_detection: ^0.10.0
+  google_mlkit_commons: ^0.7.1
+
+  # Camera package
+  camera: ^0.10.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

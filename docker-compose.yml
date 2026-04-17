@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # ML Backend API
+  ml_backend:
+    build:
+      context: ./ml_backend
+      dockerfile: Dockerfile
+    container_name: neuroscreen_ml
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=postgresql://neurouser:neuropass@postgres:5432/neuroscreen_ml
+      - FIREBASE_DATABASE_URL=${FIREBASE_DATABASE_URL}
+    depends_on:
+      - postgres
+    volumes:
+      - ./ml_backend/models:/app/models
+      - ./ml_backend/logs:/app/logs
+    networks:
+      - neuroscreen_network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: neuroscreen_db
+    environment:
+      - POSTGRES_USER=neurouser
+      - POSTGRES_PASSWORD=neuropass
+      - POSTGRES_DB=neuroscreen_ml
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./ml_backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - neuroscreen_network
+    restart: unless-stopped
+
+  # Adminer (Database UI)
+  adminer:
+    image: adminer:latest
+    container_name: neuroscreen_adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - neuroscreen_network
+    restart: unless-stopped
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: neuroscreen_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./ml_backend/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - neuroscreen_network
+    restart: unless-stopped
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: neuroscreen_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - neuroscreen_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  neuroscreen_network:
+    driver: bridge

@@ -37,43 +37,85 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
         _errorMessage = null;
       });
 
-      // Get recent test results (last 30 days)
-      final recentTests = await _firestoreService.getRecentTestResults(
-        widget.userId,
-        days: 30,
-      );
+      print('DEBUG: Starting report generation for user: ${widget.userId}');
+
+      // Add timeout to prevent hanging
+      final recentTests = await _firestoreService
+          .getRecentTestResults(widget.userId, days: 30)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              print('DEBUG: getRecentTestResults timeout');
+              return [];
+            },
+          );
+
+      print('DEBUG: Found ${recentTests.length} recent test results');
 
       if (recentTests.isEmpty) {
+        print('DEBUG: No recent tests found');
         setState(() {
-          _errorMessage = 'No recent test results found. Please complete some tests first.';
+          _errorMessage = 'No test results found yet. Complete the Memory Test first.';
           _isLoading = false;
         });
         return;
       }
 
-      // Get all historical tests for trend analysis
-      final allTests = await _firestoreService.getUserTestResults(widget.userId);
+      for (var test in recentTests) {
+        print('DEBUG: Test - ${test.testType}: ${test.score}');
+      }
 
-      // Generate report using analysis service
+      // Get all historical tests
+      final allTests = await _firestoreService
+          .getUserTestResults(widget.userId)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              print('DEBUG: getUserTestResults timeout');
+              return [];
+            },
+          );
+
+      print('DEBUG: Found ${allTests.length} total historical tests');
+
+      // Generate report
+      print('DEBUG: Generating report from ${recentTests.length} recent tests');
       final report = NeurologicalAnalysisService.analyzeResults(
         widget.userId,
         recentTests,
         historicalTests: allTests,
       );
 
-      // Store report in Firestore
-      await _firestoreService.storeNeurologyReport(report);
+      print('DEBUG: Report generated - Score: ${report.overallRiskScore}, Risk: ${report.riskLevel}');
 
-      setState(() {
-        _report = report;
-        _isLoading = false;
-      });
+      // Store report
+      print('DEBUG: Storing report to Firestore');
+      await _firestoreService.storeNeurologyReport(report).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('DEBUG: storeNeurologyReport timeout');
+          return;
+        },
+      );
+
+      print('DEBUG: Report stored successfully');
+
+      if (mounted) {
+        setState(() {
+          _report = report;
+          _isLoading = false;
+        });
+        print('DEBUG: UI updated with report');
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Error generating report: $e';
-        _isLoading = false;
-      });
-      print('Error in _loadAndGenerateReport: $e');
+      print('ERROR: $e');
+      print('Stack: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 

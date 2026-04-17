@@ -40,10 +40,19 @@ class _SignupPageState extends State<SignupPage> {
       setState(() => _isLoading = true);
 
       try {
+        // Add timeout for network issues
         final UserCredential userCredential =
             await _auth.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            throw FirebaseAuthException(
+              code: 'network-error',
+              message: 'Connection timeout. Please check your internet.',
+            );
+          },
         );
 
         await userCredential.user?.updateDisplayName(_nameController.text);
@@ -61,16 +70,27 @@ class _SignupPageState extends State<SignupPage> {
         setState(() => _isLoading = false);
 
         String errorMessage;
-        if (e.code == 'weak-password') {
-          errorMessage = 'Password is too weak';
-        } else if (e.code == 'email-already-in-use') {
-          errorMessage = 'Email is already registered';
-        } else if (e.code == 'invalid-email') {
-          errorMessage = 'Invalid email format';
-        } else if (e.code == 'operation-not-allowed') {
-          errorMessage = 'Email/password sign-up is not enabled';
-        } else {
-          errorMessage = 'Signup failed: ${e.message}';
+        switch (e.code) {
+          case 'weak-password':
+            errorMessage = 'Password must be 6+ characters with letters & numbers';
+            break;
+          case 'email-already-in-use':
+            errorMessage = 'This email is already registered. Try logging in';
+            break;
+          case 'invalid-email':
+            errorMessage = 'Invalid email format';
+            break;
+          case 'operation-not-allowed':
+            errorMessage = 'Email/password sign-up is not enabled in Firebase';
+            break;
+          case 'too-many-requests':
+            errorMessage = 'Too many attempts. Try again later';
+            break;
+          case 'network-error':
+            errorMessage = 'Network error. Check your internet connection';
+            break;
+          default:
+            errorMessage = 'Signup failed: ${e.message}';
         }
 
         if (mounted) {
@@ -78,9 +98,11 @@ class _SignupPageState extends State<SignupPage> {
             SnackBar(
               content: Text(errorMessage),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
+        print('Signup error: ${e.code} - ${e.message}');
       } catch (e) {
         setState(() => _isLoading = false);
 
@@ -89,15 +111,18 @@ class _SignupPageState extends State<SignupPage> {
             SnackBar(
               content: Text('Error: $e'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
+        print('Unexpected error: $e');
       }
     } else if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please agree to Terms & Conditions'),
           backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
     }

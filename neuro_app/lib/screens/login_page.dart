@@ -32,11 +32,26 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = true);
 
       try {
+        print('=== LOGIN ATTEMPT ===');
+        print('Email: ${_emailController.text.trim()}');
+        print('Firebase Project: neuroscreen-5002d');
+
+        // Add timeout for network issues
         final UserCredential userCredential =
             await _auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            throw FirebaseAuthException(
+              code: 'network-error',
+              message: 'Connection timeout. Please check your internet.',
+            );
+          },
         );
+
+        print('LOGIN SUCCESS: ${userCredential.user?.email}');
 
         if (mounted) {
           setState(() => _isLoading = false);
@@ -50,17 +65,41 @@ class _LoginPageState extends State<LoginPage> {
       } on FirebaseAuthException catch (e) {
         setState(() => _isLoading = false);
 
+        // Log full error details
+        print('=== FIREBASE AUTH ERROR ===');
+        print('Code: ${e.code}');
+        print('Message: ${e.message}');
+        print('Plugin: ${e.plugin}');
+        print('===============');
+
         String errorMessage;
-        if (e.code == 'user-not-found') {
-          errorMessage = 'No account found with this email';
-        } else if (e.code == 'wrong-password') {
-          errorMessage = 'Incorrect password';
-        } else if (e.code == 'invalid-email') {
-          errorMessage = 'Invalid email format';
-        } else if (e.code == 'user-disabled') {
-          errorMessage = 'This account has been disabled';
-        } else {
-          errorMessage = 'Login failed: ${e.message}';
+        switch (e.code) {
+          case 'user-not-found':
+            errorMessage = 'No account found with this email.\nTry signing up instead.';
+            break;
+          case 'wrong-password':
+            errorMessage = 'Incorrect password.\nPlease try again.';
+            break;
+          case 'invalid-email':
+            errorMessage = 'Invalid email format.\nEnter a valid email.';
+            break;
+          case 'user-disabled':
+            errorMessage = 'This account has been disabled.\nContact support.';
+            break;
+          case 'too-many-requests':
+            errorMessage = 'Too many login attempts.\nTry again in a few minutes.';
+            break;
+          case 'invalid-credential':
+            errorMessage = 'Invalid email or password.\nPlease check and try again.';
+            break;
+          case 'network-error':
+            errorMessage = 'Network error.\nCheck your internet connection.';
+            break;
+          case 'operation-not-allowed':
+            errorMessage = 'Email/password login is not enabled.\nContact admin.';
+            break;
+          default:
+            errorMessage = 'Login Error: ${e.code}\n${e.message ?? 'Unknown error'}';
         }
 
         if (mounted) {
@@ -68,17 +107,24 @@ class _LoginPageState extends State<LoginPage> {
             SnackBar(
               content: Text(errorMessage),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
       } catch (e) {
         setState(() => _isLoading = false);
 
+        print('=== UNEXPECTED ERROR ===');
+        print('Type: ${e.runtimeType}');
+        print('Message: $e');
+        print('===============');
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: $e'),
+              content: Text('Error: ${e.toString()}'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
           );
         }

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class TestResult {
   final String id;
   final String userId;
@@ -43,7 +45,7 @@ class TestResult {
       'userId': userId,
       'testType': testType,
       'score': score,
-      'timestamp': timestamp,
+      'timestamp': Timestamp.fromDate(timestamp),
       'details': details,
     };
   }
