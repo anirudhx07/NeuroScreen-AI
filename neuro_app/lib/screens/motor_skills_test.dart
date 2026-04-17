@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:neuro_app/helpers/test_result_helper.dart';
+import 'package:neuro_app/screens/neurology_report_screen.dart';
 
 class MotorSkillsTest extends StatefulWidget {
   const MotorSkillsTest({super.key});
@@ -59,6 +62,36 @@ class _MotorSkillsTestState extends State<MotorSkillsTest> {
       _testCompleted = false;
       _remainingSeconds = 0;
     });
+  }
+
+  Future<void> _storeTestResult() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        // Score based on taps per second (normalize to 0-100)
+        final score = (_tapsPerSecond * 10).clamp(0.0, 100.0);
+        await TestResultHelper.storeMotorSkillsTestResult(
+          userId: currentUser.uid,
+          score: _tapCount.toDouble(),
+          maxScore: 150.0, // Assuming ~5 taps/second for 30 seconds
+        );
+        print('Motor skills test result stored: $_tapCount taps in $_testDurationSeconds seconds');
+      }
+    } catch (e) {
+      print('Error storing test result: $e');
+    }
+  }
+
+  void _viewReport() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NeurologyReportScreen(userId: currentUser.uid),
+        ),
+      );
+    }
   }
 
   @override
@@ -329,7 +362,10 @@ class _MotorSkillsTestState extends State<MotorSkillsTest> {
                           ),
                           const SizedBox(width: 16),
                           ElevatedButton.icon(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () {
+                              _storeTestResult();
+                              Navigator.pop(context);
+                            },
                             icon: const Icon(Icons.check),
                             label: const Text('Complete'),
                             style: ElevatedButton.styleFrom(

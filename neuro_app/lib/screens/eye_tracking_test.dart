@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:neuro_app/helpers/test_result_helper.dart';
+import 'package:neuro_app/screens/neurology_report_screen.dart';
 
 class EyeTrackingTest extends StatefulWidget {
   const EyeTrackingTest({super.key});
@@ -313,6 +316,45 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
     return "High Risk";
   }
 
+  Future<void> _storeTestResult() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        // Calculate eye tracking score (0-100)
+        double score = 100.0;
+        if (avgLatency > 300) score -= 30;
+        if (accuracy < 60) score -= 40;
+        if (stability > 5000) score -= 30;
+
+        await TestResultHelper.storeEyeTrackingTestResult(
+          userId: currentUser.uid,
+          accuracyPercentage: accuracy.clamp(0.0, 100.0),
+          trackingQuality: {
+            'averageLatency': avgLatency,
+            'accuracy': accuracy,
+            'stability': stability,
+            'calibrationStatus': 'Complete',
+          },
+        );
+        print('Eye tracking test result stored: Accuracy $accuracy%');
+      }
+    } catch (e) {
+      print('Error storing test result: $e');
+    }
+  }
+
+  void _viewReport() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NeurologyReportScreen(userId: currentUser.uid),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _cameraController?.stopImageStream();
@@ -406,7 +448,20 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
                     "⚠️ This is not a medical diagnosis. For screening purposes only.",
                     style: TextStyle(fontSize: 12, color: Colors.red),
                     textAlign: TextAlign.center,
-                  )
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      _storeTestResult();
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('Complete'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             )

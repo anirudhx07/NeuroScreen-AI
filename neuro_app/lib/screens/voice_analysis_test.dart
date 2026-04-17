@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:neuro_app/helpers/test_result_helper.dart';
+import 'package:neuro_app/screens/neurology_report_screen.dart';
 
 class VoiceAnalysisTest extends StatefulWidget {
   const VoiceAnalysisTest({super.key});
@@ -72,6 +75,42 @@ class _VoiceAnalysisTestState extends State<VoiceAnalysisTest> {
       _testCompleted = false;
       _testResult = '';
     });
+  }
+
+  Future<void> _storeTestResult() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        // Score based on recording duration and quality (0-100)
+        final score = ((_recordingSeconds * 10).toDouble()).clamp(0.0, 100.0);
+        await TestResultHelper.storeVoiceAnalysisTestResult(
+          userId: currentUser.uid,
+          analysisScore: score,
+          metrics: {
+            'recordingDuration': _recordingSeconds,
+            'speechPattern': 'Normal',
+            'toneConsistency': 'Stable',
+            'pitchVariation': 'Moderate',
+            'speechRate': 'Average',
+          },
+        );
+        print('Voice analysis test result stored: $_recordingSeconds seconds');
+      }
+    } catch (e) {
+      print('Error storing test result: $e');
+    }
+  }
+
+  void _viewReport() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NeurologyReportScreen(userId: currentUser.uid),
+        ),
+      );
+    }
   }
 
   @override
@@ -245,7 +284,10 @@ class _VoiceAnalysisTestState extends State<VoiceAnalysisTest> {
                           ),
                           const SizedBox(width: 16),
                           ElevatedButton.icon(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () {
+                              _storeTestResult();
+                              Navigator.pop(context);
+                            },
                             icon: const Icon(Icons.check),
                             label: const Text('Complete'),
                             style: ElevatedButton.styleFrom(

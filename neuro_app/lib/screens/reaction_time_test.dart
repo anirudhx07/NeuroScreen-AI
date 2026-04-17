@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:neuro_app/helpers/test_result_helper.dart';
+import 'package:neuro_app/screens/neurology_report_screen.dart';
 
 class ReactionTimeTest extends StatefulWidget {
   const ReactionTimeTest({super.key});
@@ -68,6 +71,33 @@ class _ReactionTimeTestState extends State<ReactionTimeTest> {
       _testCompleted = false;
     });
     _startTest();
+  }
+
+  Future<void> _storeTestResult(int reactionTimeMs) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        await TestResultHelper.storeReactionTimeTestResult(
+          userId: currentUser.uid,
+          reactionTimeMs: reactionTimeMs.toDouble(),
+        );
+        print('Reaction time test result stored: $reactionTimeMs ms');
+      }
+    } catch (e) {
+      print('Error storing test result: $e');
+    }
+  }
+
+  void _viewReport() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NeurologyReportScreen(userId: currentUser.uid),
+        ),
+      );
+    }
   }
 
   @override
@@ -226,7 +256,10 @@ class _ReactionTimeTestState extends State<ReactionTimeTest> {
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton.icon(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            _storeTestResult(_reactionTime);
+                            Navigator.pop(context);
+                          },
                           icon: const Icon(Icons.check),
                           label: const Text('Complete'),
                           style: ElevatedButton.styleFrom(
