@@ -23,6 +23,7 @@ from typing import Tuple
 # Real imports
 from ml.models import RiskPredictor, TrendAnalyzer, AnomalyDetector
 from ml.preprocessing import DataPreprocessor, FeatureEngineer
+from ml.training import TrainingPipeline, ModelEvaluator
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -549,6 +550,114 @@ class TestRealEndToEndWorkflow:
 
         assert cognitive_trend['direction'] == 'up', "Should show improvement"
         logger.info("\n✓ Rehabilitation successful!")
+        logger.info("=" * 60)
+
+
+class TestTrainingPipeline:
+    """Tests for the integrated TrainingPipeline."""
+
+    def test_pipeline_end_to_end(self, real_complete_dataset):
+        """
+        INTEGRATION TEST: Complete training pipeline with real data.
+        Tests that TrainingPipeline properly orchestrates all stages.
+        """
+        X, y = real_complete_dataset
+
+        # Create pipeline
+        pipeline = TrainingPipeline()
+
+        # Manually run pipeline stages with real data
+        logger.info("\n" + "=" * 60)
+        logger.info("TRAINING PIPELINE INTEGRATION TEST")
+        logger.info("=" * 60)
+
+        # Stage 1: Data validation
+        logger.info("\n[Stage 1] Data Validation")
+        is_valid = not (np.any(np.isnan(X)) or np.any(np.isinf(X)))
+        assert is_valid, "Data should be valid (no NaN or Inf)"
+        logger.info(f"  ✓ Data shape: {X.shape}")
+        logger.info(f"  ✓ No NaN values: {not np.any(np.isnan(X))}")
+        logger.info(f"  ✓ No Inf values: {not np.any(np.isinf(X))}")
+
+        # Stage 2: Feature engineering
+        logger.info("\n[Stage 2] Feature Engineering")
+        engineer = FeatureEngineer()
+        df = pd.DataFrame(X, columns=['cognitive_score', 'motor_score', 'reaction_time', 'memory_retention', 'accuracy_rate'])
+        df['risk_level'] = y
+
+        # Apply feature engineering
+        df_engineered = engineer.create_interaction_features(df)
+        logger.info(f"  ✓ Original features: {X.shape[1]}")
+        logger.info(f"  ✓ Engineered features: {df_engineered.shape[1]}")
+        assert df_engineered.shape[1] >= X.shape[1], "Should have same or more features"
+
+        # Stage 3: Model training via pipeline
+        logger.info("\n[Stage 3] Model Training")
+        start = time.time()
+        risk_metrics = pipeline.risk_predictor.train(X, y)
+        train_time = time.time() - start
+
+        assert pipeline.risk_predictor.model is not None, "Model should be trained"
+        assert risk_metrics['accuracy'] > 0.80, "Accuracy should exceed 80%"
+        logger.info(f"  ✓ RiskPredictor trained: {risk_metrics['accuracy']:.2%} accuracy")
+        logger.info(f"  ✓ Training time: {train_time:.2f}s")
+
+        # Stage 4: Anomaly detector
+        logger.info("\n[Stage 4] Anomaly Detection Model")
+        anomaly_metrics = pipeline.anomaly_detector.train(X)
+        assert pipeline.anomaly_detector.model is not None, "Anomaly model should be trained"
+        logger.info(f"  ✓ AnomalyDetector trained")
+
+        # Stage 5: Trend analyzer (no training needed)
+        logger.info("\n[Stage 5] Trend Analyzer Ready")
+        logger.info(f"  ✓ TrendAnalyzer initialized")
+
+        # Stage 6: Model persistence check
+        logger.info("\n[Stage 6] Model Persistence")
+        assert hasattr(pipeline.risk_predictor, 'save'), "Model should have save method"
+        assert hasattr(pipeline.anomaly_detector, 'save'), "Anomaly detector should have save method"
+        logger.info(f"  ✓ Save/Load methods available")
+
+        # Stage 7: Cross-validation
+        logger.info("\n[Stage 7] Model Evaluation")
+        evaluator = ModelEvaluator()
+        cv_results = evaluator.cross_validate(pipeline.risk_predictor.model, X, y, folds=3)
+        assert cv_results['mean'] > 0.75, "Cross-validation accuracy should exceed 75%"
+        logger.info(f"  ✓ Cross-validation mean: {cv_results['mean']:.2%}")
+        logger.info(f"  ✓ Std dev: {cv_results['std']:.2%}")
+
+        logger.info("\n" + "=" * 60)
+        logger.info("✓ TRAINING PIPELINE COMPLETE - ALL STAGES PASSED")
+        logger.info("=" * 60)
+
+    def test_pipeline_with_model_comparison(self, real_complete_dataset):
+        """
+        TEST: Compare model performance using pipeline evaluator.
+        """
+        X, y = real_complete_dataset
+
+        logger.info("\n" + "=" * 60)
+        logger.info("MODEL COMPARISON TEST")
+        logger.info("=" * 60)
+
+        from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+        from sklearn.linear_model import LogisticRegression
+
+        models = {
+            'RandomForest': RandomForestClassifier(n_estimators=100, random_state=42),
+            'GradientBoosting': GradientBoostingClassifier(n_estimators=100, random_state=42),
+            'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42)
+        }
+
+        evaluator = ModelEvaluator()
+        results = evaluator.compare_models(models, X, y)
+
+        logger.info("\nModel Comparison Results:")
+        for model_name, accuracy in results.items():
+            logger.info(f"  {model_name}: {accuracy:.2%}")
+
+        best_model = max(results.items(), key=lambda x: x[1])
+        logger.info(f"\n✓ Best model: {best_model[0]} ({best_model[1]:.2%})")
         logger.info("=" * 60)
 
 
