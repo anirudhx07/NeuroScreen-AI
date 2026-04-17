@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:google_mlkit_face_mesh_detection/google_mlkit_face_mesh_detection.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:neuro_app/helpers/test_result_helper.dart';
 import 'package:neuro_app/screens/neurology_report_screen.dart';
@@ -27,12 +25,9 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
   late List<CameraDescription> _cameras;
   int _selectedCameraIndex = 0;
 
-  // ML KIT
-  final FaceDetector _faceDetector = FaceDetector(
-    options: FaceDetectorOptions(
-      enableLandmarks: true,
-      performanceMode: FaceDetectorMode.accurate,
-    ),
+  // ML KIT (face mesh gives denser eye contour points than simple landmarks)
+  final FaceMeshDetector _faceMeshDetector = FaceMeshDetector(
+    option: FaceMeshDetectorOptions.faceMesh,
   );
 
   // DOT ANIMATION
@@ -43,6 +38,16 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
   Offset _dotPosition = Offset.zero;
   Offset _previousDotPosition = Offset.zero;
 
+  // Calibration and smoothing state for stable real-time tracking
+  bool _isCalibrating = false;
+  DateTime? _calibrationStartTime;
+  static const Duration _calibrationDuration = Duration(seconds: 3);
+  double _minRawX = double.infinity;
+  double _maxRawX = double.negativeInfinity;
+  double _minRawY = double.infinity;
+  double _maxRawY = double.negativeInfinity;
+  static const double _smoothingAlpha = 0.35;
+
   int totalTracks = 0;
   int successfulTracks = 0;
   List<double> latencies = [];
@@ -50,7 +55,7 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
 
   // Frame throttling to avoid overprocessing
   DateTime _lastFrameTime = DateTime.now();
-  static const Duration _frameThrottleDuration = Duration(milliseconds: 100);
+  static const Duration _frameThrottleDuration = Duration(milliseconds: 50);
 
   DateTime? dotMovedTime;
   DateTime? testStartTime;
@@ -60,6 +65,13 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
   bool started = false;
   bool completed = false;
   bool _isProcessingFrame = false;
+
+  double get calibrationProgress {
+    if (!_isCalibrating || _calibrationStartTime == null) return 1.0;
+    final elapsed = DateTime.now().difference(_calibrationStartTime!);
+    return (elapsed.inMilliseconds / _calibrationDuration.inMilliseconds)
+        .clamp(0.0, 1.0);
+  }
 
   @override
   void initState() {
@@ -118,6 +130,7 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
       _cameras[cameraIndex],
       ResolutionPreset.medium,
       enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.yuv420,
     );
 
     await _cameraController!.initialize();
@@ -144,46 +157,37 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
       final inputImage = _inputImageFromCamera(image);
       if (inputImage == null) return;
 
-      final faces = await _faceDetector.processImage(inputImage);
+      final meshes = await _faceMeshDetector.processImage(inputImage);
+      if (meshes.isEmpty) return;
 
-      if (faces.isNotEmpty) {
-        final face = faces.first;
+      final rawEye = _estimateEyeCenterFromMesh(meshes.first);
+      if (rawEye == null) return;
 
-        final leftEye = face.landmarks[FaceLandmarkType.leftEye];
-        final rightEye = face.landmarks[FaceLandmarkType.rightEye];
+      if (started) {
+        _updateCalibration(rawEye);
+      }
 
-        if (leftEye != null && rightEye != null) {
-          // Calculate eye center in camera frame coordinates
-          Offset eyeCenter = Offset(
-            (leftEye.position.x + rightEye.position.x) / 2,
-            (leftEye.position.y + rightEye.position.y) / 2,
-          );
+      final mappedEye = _mapRawEyeToTrackingCanvas(rawEye, imageSize: Size(image.width.toDouble(), image.height.toDouble()));
+      final smoothedEye = (_eyePosition == null)
+          ? mappedEye
+          : _smoothOffset(_eyePosition!, mappedEye, _smoothingAlpha);
 
-          // Map camera coordinates to screen coordinates
-          // Scale to match the dot container (300px height)
-          final scaleFactor = 300 / image.height;
-          final mappedEye = Offset(
-            eyeCenter.dx * scaleFactor,
-            eyeCenter.dy * scaleFactor,
-          );
+      setState(() {
+        _eyePosition = smoothedEye;
+        if (eyeHistory.length >= _maxEyeHistorySize) {
+          eyeHistory.removeAt(0);
+        }
+        eyeHistory.add(smoothedEye);
+      });
 
-          setState(() {
-            _eyePosition = mappedEye;
-            // Limit eye history to prevent memory growth
-            if (eyeHistory.length >= _maxEyeHistorySize) {
-              eyeHistory.removeAt(0);
-            }
-            eyeHistory.add(mappedEye);
-          });
+      if (started && !_isCalibrating) {
+        _analyzeTracking();
+      }
 
-          _analyzeTracking();
-
-          // Check if test should end (30 second limit)
-          if (started && testStartTime != null) {
-            if (DateTime.now().difference(testStartTime!) > _maxTestDuration) {
-              _endTest();
-            }
-          }
+      // Check if test should end (30 second limit)
+      if (started && testStartTime != null) {
+        if (DateTime.now().difference(testStartTime!) > _maxTestDuration) {
+          _endTest();
         }
       }
     } catch (e) {
@@ -191,6 +195,76 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
     } finally {
       _isProcessingFrame = false;
     }
+  }
+
+  Offset? _estimateEyeCenterFromMesh(FaceMesh mesh) {
+    final leftEyeContour = mesh.contours[FaceMeshContourType.leftEye] ?? [];
+    final rightEyeContour = mesh.contours[FaceMeshContourType.rightEye] ?? [];
+
+    if (leftEyeContour.isEmpty || rightEyeContour.isEmpty) {
+      return null;
+    }
+
+    Offset centroid(List<FaceMeshPoint> points) {
+      final sumX = points.fold<double>(0.0, (prev, p) => prev + p.x);
+      final sumY = points.fold<double>(0.0, (prev, p) => prev + p.y);
+      return Offset(sumX / points.length, sumY / points.length);
+    }
+
+    final leftCenter = centroid(leftEyeContour);
+    final rightCenter = centroid(rightEyeContour);
+
+    return Offset(
+      (leftCenter.dx + rightCenter.dx) / 2,
+      (leftCenter.dy + rightCenter.dy) / 2,
+    );
+  }
+
+  void _updateCalibration(Offset rawEye) {
+    if (!_isCalibrating || _calibrationStartTime == null) return;
+
+    _minRawX = min(_minRawX, rawEye.dx);
+    _maxRawX = max(_maxRawX, rawEye.dx);
+    _minRawY = min(_minRawY, rawEye.dy);
+    _maxRawY = max(_maxRawY, rawEye.dy);
+
+    if (DateTime.now().difference(_calibrationStartTime!) >= _calibrationDuration) {
+      setState(() {
+        _isCalibrating = false;
+      });
+    }
+  }
+
+  Offset _mapRawEyeToTrackingCanvas(Offset rawEye, {required Size imageSize}) {
+    const double canvasSize = 300.0;
+
+    double nx;
+    double ny;
+
+    final calibratedRangeX = (_maxRawX - _minRawX).abs();
+    final calibratedRangeY = (_maxRawY - _minRawY).abs();
+
+    if (!_isCalibrating && calibratedRangeX > 1.0 && calibratedRangeY > 1.0) {
+      nx = ((rawEye.dx - _minRawX) / calibratedRangeX).clamp(0.0, 1.0);
+      ny = ((rawEye.dy - _minRawY) / calibratedRangeY).clamp(0.0, 1.0);
+    } else {
+      nx = (rawEye.dx / imageSize.width).clamp(0.0, 1.0);
+      ny = (rawEye.dy / imageSize.height).clamp(0.0, 1.0);
+    }
+
+    // Front camera preview is mirrored on many devices, so invert X for intuitive mapping.
+    if (_cameras[_selectedCameraIndex].lensDirection == CameraLensDirection.front) {
+      nx = 1.0 - nx;
+    }
+
+    return Offset(nx * canvasSize, ny * canvasSize);
+  }
+
+  Offset _smoothOffset(Offset previous, Offset current, double alpha) {
+    return Offset(
+      previous.dx + (current.dx - previous.dx) * alpha,
+      previous.dy + (current.dy - previous.dy) * alpha,
+    );
   }
 
   InputImage? _inputImageFromCamera(CameraImage image) {
@@ -204,8 +278,8 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
 
       final metadata = InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: InputImageRotation.rotation0deg,
-        format: InputImageFormat.nv21,
+        rotation: _inputImageRotationFromCamera(),
+        format: InputImageFormatValue.fromRawValue(image.format.raw) ?? InputImageFormat.nv21,
         bytesPerRow: image.planes[0].bytesPerRow,
       );
 
@@ -214,6 +288,28 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
       print('Error creating InputImage: $e');
       return null;
     }
+  }
+
+  InputImageRotation _inputImageRotationFromCamera() {
+    if (_cameraController == null) return InputImageRotation.rotation0deg;
+
+    final camera = _cameras[_selectedCameraIndex];
+    final sensorOrientation = camera.sensorOrientation;
+
+    final deviceRotation = switch (_cameraController!.value.deviceOrientation) {
+      DeviceOrientation.portraitUp => 0,
+      DeviceOrientation.landscapeLeft => 90,
+      DeviceOrientation.portraitDown => 180,
+      DeviceOrientation.landscapeRight => 270,
+    };
+
+    final rotationCompensation =
+        camera.lensDirection == CameraLensDirection.front
+            ? (sensorOrientation + deviceRotation) % 360
+            : (sensorOrientation - deviceRotation + 360) % 360;
+
+    return InputImageRotationValue.fromRawValue(rotationCompensation) ??
+        InputImageRotation.rotation0deg;
   }
 
   void _updateDot() {
@@ -240,6 +336,12 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
     setState(() {
       started = true;
       testStartTime = DateTime.now();
+      _isCalibrating = true;
+      _calibrationStartTime = DateTime.now();
+      _minRawX = double.infinity;
+      _maxRawX = double.negativeInfinity;
+      _minRawY = double.infinity;
+      _maxRawY = double.negativeInfinity;
       totalTracks = 0;
       successfulTracks = 0;
       latencies.clear();
@@ -260,6 +362,12 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
     setState(() {
       completed = false;
       started = false;
+      _isCalibrating = false;
+      _calibrationStartTime = null;
+      _minRawX = double.infinity;
+      _maxRawX = double.negativeInfinity;
+      _minRawY = double.infinity;
+      _maxRawY = double.negativeInfinity;
       totalTracks = 0;
       successfulTracks = 0;
       latencies.clear();
@@ -319,13 +427,9 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
   Future<void> _storeTestResult() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
+      print('DEBUG: currentUser = $currentUser');
       if (currentUser != null) {
-        // Calculate eye tracking score (0-100)
-        double score = 100.0;
-        if (avgLatency > 300) score -= 30;
-        if (accuracy < 60) score -= 40;
-        if (stability > 5000) score -= 30;
-
+        print('DEBUG: Storing test result for user: ${currentUser.uid}');
         await TestResultHelper.storeEyeTrackingTestResult(
           userId: currentUser.uid,
           accuracyPercentage: accuracy.clamp(0.0, 100.0),
@@ -336,10 +440,13 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
             'calibrationStatus': 'Complete',
           },
         );
-        print('Eye tracking test result stored: Accuracy $accuracy%');
+        print('✅ Eye tracking test result stored: Accuracy $accuracy%');
+      } else {
+        print('❌ ERROR: currentUser is null - user not authenticated');
       }
     } catch (e) {
-      print('Error storing test result: $e');
+      print('❌ Error storing test result: $e');
+      rethrow;
     }
   }
 
@@ -360,7 +467,7 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
     _cameraController?.stopImageStream();
     _cameraController?.dispose();
     if (!kIsWeb) {
-      _faceDetector.close();
+      _faceMeshDetector.close();
     }
     _dotController.dispose();
     super.dispose();
@@ -441,6 +548,11 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
                   Text("Accuracy: ${accuracy.toStringAsFixed(1)}%"),
                   Text("Latency: ${avgLatency.toStringAsFixed(0)} ms"),
                   Text("Stability: ${stability.toStringAsFixed(0)}"),
+                  if (_isCalibrating)
+                    Text(
+                      "Calibrating eyes... ${(calibrationProgress * 100).toStringAsFixed(0)}%",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   Text("Risk: $riskLevel",
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
@@ -451,9 +563,11 @@ class _EyeTrackingTestState extends State<EyeTrackingTest>
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      _storeTestResult();
-                      Navigator.pop(context);
+                    onPressed: () async {
+                      await _storeTestResult();
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
                     },
                     icon: const Icon(Icons.check),
                     label: const Text('Complete'),

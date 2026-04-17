@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>NeuroScreen AI needs microphone access to record and analyze voice during the voice assessment test.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>NeuroScreen AI uses speech recognition to estimate speaking speed and pause patterns for neurological screening.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

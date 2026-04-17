@@ -231,15 +231,69 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
           ? 'Normal'
           : (categoryRisk < 66 ? 'At Risk' : 'High Risk');
 
+      String feedback = 'Score: ${test.score.toStringAsFixed(1)}/100';
+      if (test.testType == 'voice_analysis') {
+        feedback = _formatVoiceMetricsFeedback(test);
+      }
+
       breakdowns[test.testType] = TestScoreBreakdown(
-        testName: test.testType,
+        testName: _displayNameForTestType(test.testType),
         score: test.score,
         status: status,
-        feedback: 'Score: ${test.score.toStringAsFixed(1)}/100',
+        feedback: feedback,
       );
     }
 
     return breakdowns;
+  }
+
+  String _displayNameForTestType(String testType) {
+    switch (testType) {
+      case 'memory':
+        return 'Memory Test';
+      case 'reaction_time':
+        return 'Reaction Time';
+      case 'motor_skills':
+        return 'Motor Skills';
+      case 'voice_analysis':
+        return 'Voice Analysis';
+      case 'eye_tracking':
+        return 'Eye Tracking';
+      default:
+        return testType;
+    }
+  }
+
+  String _formatVoiceMetricsFeedback(TestResult test) {
+    final details = test.details;
+    final wpm = (details['wordsPerMinute'] as num?)?.toDouble();
+    final pauses = (details['pauseCount'] as num?)?.toInt();
+    final words = (details['wordsDetected'] as num?)?.toInt();
+    final speechRateCategory = details['speechRateCategory']?.toString();
+    final speakingRatio = (details['speakingRatio'] as num?)?.toDouble();
+
+    if (wpm == null && pauses == null && words == null) {
+      return 'Score: ${test.score.toStringAsFixed(1)}/100';
+    }
+
+    final parts = <String>[];
+    if (wpm != null) {
+      parts.add('WPM ${wpm.toStringAsFixed(1)}');
+    }
+    if (speechRateCategory != null && speechRateCategory.isNotEmpty) {
+      parts.add(speechRateCategory);
+    }
+    if (pauses != null) {
+      parts.add('Pauses $pauses');
+    }
+    if (words != null) {
+      parts.add('Words $words');
+    }
+    if (speakingRatio != null) {
+      parts.add('Speaking ${(speakingRatio * 100).toStringAsFixed(0)}%');
+    }
+
+    return parts.join(' | ');
   }
 
   /// Calculate trends from test history
@@ -286,6 +340,7 @@ class _NeurologyReportScreenState extends State<NeurologyReportScreen> {
     if (_report == null) return;
 
     try {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Generating PDF...')),
       );

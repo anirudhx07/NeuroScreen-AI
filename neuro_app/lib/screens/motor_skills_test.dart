@@ -67,7 +67,9 @@ class _MotorSkillsTestState extends State<MotorSkillsTest> {
   Future<void> _storeTestResult() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
+      print('DEBUG: currentUser = $currentUser');
       if (currentUser != null) {
+        print('DEBUG: Storing test result for user: ${currentUser.uid}');
         // Score based on taps per second (normalize to 0-100)
         final score = (_tapsPerSecond * 10).clamp(0.0, 100.0);
         await TestResultHelper.storeMotorSkillsTestResult(
@@ -75,10 +77,13 @@ class _MotorSkillsTestState extends State<MotorSkillsTest> {
           score: _tapCount.toDouble(),
           maxScore: 150.0, // Assuming ~5 taps/second for 30 seconds
         );
-        print('Motor skills test result stored: $_tapCount taps in $_testDurationSeconds seconds');
+        print('✅ Motor skills test result stored: $_tapCount taps in $_testDurationSeconds seconds');
+      } else {
+        print('❌ ERROR: currentUser is null - user not authenticated');
       }
     } catch (e) {
-      print('Error storing test result: $e');
+      print('❌ Error storing test result: $e');
+      rethrow;
     }
   }
 
@@ -362,9 +367,11 @@ class _MotorSkillsTestState extends State<MotorSkillsTest> {
                           ),
                           const SizedBox(width: 16),
                           ElevatedButton.icon(
-                            onPressed: () {
-                              _storeTestResult();
-                              Navigator.pop(context);
+                            onPressed: () async {
+                              await _storeTestResult();
+                              if (mounted) {
+                                Navigator.pop(context);
+                              }
                             },
                             icon: const Icon(Icons.check),
                             label: const Text('Complete'),

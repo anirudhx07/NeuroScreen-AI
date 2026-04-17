@@ -36,9 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Firebase packages for authentication
-  firebase_core: ^2.24.0
-  firebase_auth: ^4.10.0
-  cloud_firestore: ^4.14.0
+  firebase_core: ^4.7.0
+  firebase_auth: ^6.4.0
+  cloud_firestore: ^6.3.0
   url_launcher: ^6.1.0
 
   # HTTP client for ML backend communication
@@ -61,9 +61,13 @@ dependencies:
   # ML Kit for face and vision detection
   google_mlkit_face_detection: ^0.10.0
   google_mlkit_commons: ^0.7.1
+  google_mlkit_face_mesh_detection: ^0.2.0
 
   # Camera package
   camera: ^0.10.5
+
+  # Live speech transcription and sound level callbacks
+  speech_to_text: ^7.0.0
 
 dev_dependencies:
   flutter_test:

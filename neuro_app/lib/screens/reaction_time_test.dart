@@ -76,15 +76,20 @@ class _ReactionTimeTestState extends State<ReactionTimeTest> {
   Future<void> _storeTestResult(int reactionTimeMs) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
+      print('DEBUG: currentUser = $currentUser');
       if (currentUser != null) {
+        print('DEBUG: Storing test result for user: ${currentUser.uid}');
         await TestResultHelper.storeReactionTimeTestResult(
           userId: currentUser.uid,
           reactionTimeMs: reactionTimeMs.toDouble(),
         );
-        print('Reaction time test result stored: $reactionTimeMs ms');
+        print('✅ Reaction time test result stored: $reactionTimeMs ms');
+      } else {
+        print('❌ ERROR: currentUser is null - user not authenticated');
       }
     } catch (e) {
-      print('Error storing test result: $e');
+      print('❌ Error storing test result: $e');
+      rethrow;
     }
   }
 
@@ -256,9 +261,11 @@ class _ReactionTimeTestState extends State<ReactionTimeTest> {
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton.icon(
-                          onPressed: () {
-                            _storeTestResult(_reactionTime);
-                            Navigator.pop(context);
+                          onPressed: () async {
+                            await _storeTestResult(_reactionTime);
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
                           },
                           icon: const Icon(Icons.check),
                           label: const Text('Complete'),

@@ -105,15 +105,21 @@ class _MemoryTestState extends State<MemoryTest> {
   Future<void> _storeTestResult(int correctAnswers) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
+      print('DEBUG: currentUser = $currentUser');
       if (currentUser != null) {
+        print('DEBUG: Storing test result for user: ${currentUser.uid}');
         await TestResultHelper.storeMemoryTestResult(
           userId: currentUser.uid,
           correctAnswers: correctAnswers,
           totalItems: 5, // User selects 5 items
         );
+        print('✅ Memory test result stored: $correctAnswers/5 correct');
+      } else {
+        print('❌ ERROR: currentUser is null - user not authenticated');
       }
     } catch (e) {
-      print('Error storing test result: $e');
+      print('❌ Error storing test result: $e');
+      rethrow;
     }
   }
 

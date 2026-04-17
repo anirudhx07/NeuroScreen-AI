@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:neuro_app/models/neurology_report.dart';
 import 'package:neuro_app/models/test_result.dart';
 import 'package:neuro_app/services/app_config.dart';
 

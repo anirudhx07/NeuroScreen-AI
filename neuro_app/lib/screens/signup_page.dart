@@ -330,7 +330,7 @@ class _SignupPageState extends State<SignupPage> {
                             onChanged: (value) {
                               setState(() => _agreeToTerms = value ?? false);
                             },
-                            fillColor: MaterialStateProperty.all(
+                            fillColor: WidgetStateProperty.all(
                               _agreeToTerms
                                   ? const Color(0xFF0052CC)
                                   : Colors.transparent,

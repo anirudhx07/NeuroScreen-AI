@@ -192,12 +192,14 @@ class _DownloadReportsScreenState extends State<DownloadReportsScreen> {
   }
 
   Future<void> _exportPDF(NeurologyReport report) async {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Generating PDF...')),
     );
 
     try {
       final pdfFile = await PDFExportService.generatePDFReport(report);
+      if (!mounted) return;
       if (pdfFile != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -211,6 +213,7 @@ class _DownloadReportsScreenState extends State<DownloadReportsScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -220,6 +223,7 @@ class _DownloadReportsScreenState extends State<DownloadReportsScreen> {
   Future<void> _shareReport(NeurologyReport report) async {
     try {
       final pdfFile = await PDFExportService.generatePDFReport(report);
+      if (!mounted) return;
       if (pdfFile != null) {
         await Share.shareXFiles(
           [pdfFile],
@@ -227,11 +231,13 @@ class _DownloadReportsScreenState extends State<DownloadReportsScreen> {
           text: 'My neurological assessment report from NeuroScreen AI',
         );
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Share not available on web')),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error sharing: $e')),
       );

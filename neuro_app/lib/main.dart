@@ -38,6 +38,7 @@ class MyApp extends StatelessWidget {
       title: 'NeuroScreen',
       // Configure app theme with deep blue seed color
       theme: ThemeData(
+        fontFamily: 'Arial',
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
